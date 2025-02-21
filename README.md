@@ -39,6 +39,8 @@ git lfs pull
 
 ## Usage
 
+Use `setup.sh` to download data and create folder for results.
+
 ### Running the Model
 
 The implementation for the `RadonMachineLinearBase` class inherits from the `LinearClassifierMixin` type.
@@ -47,7 +49,9 @@ A short example of how to run the model is located at the bottom of the file.
 
 ### Experiments
 
-TODO
+To run results on the real data `cd real_data_experiments` and run `SVM_radon_machine_experiments.py` with
+the optional flag `--dataset name` where `name` can correspond to `SEA`, `SUSY`, or `codrna`.
+
 
 ### Simulating the Aggregation
 
