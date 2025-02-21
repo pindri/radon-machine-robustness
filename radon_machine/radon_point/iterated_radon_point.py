@@ -14,6 +14,22 @@ def iterated_radon_point(points, radon_num, height, sigma=1e-5, shuffle = True):
         condition_numbers.append(cond_nums)
     return points[0], [item for sublist in condition_numbers for item in sublist]
 
+def iterated_averaging(points, radon_num, height, sigma=1e-5, shuffle=True):
+    if shuffle:
+        np.random.shuffle(points)
+    condition_numbers = []
+    assert len(points) == radon_num ** height
+    _, num_dimensions = points.shape
+    for _ in range(height):
+        points += np.random.randn(*points.shape) * (sigma * points.std(axis=0))
+        # Ugly reshaping to make the averaging every radon_num entries.
+        points = points.reshape(-1, radon_num, num_dimensions)
+        points = points.mean(axis=1)
+        cond_nums = [0]
+        condition_numbers.append(cond_nums)
+    return points[0], [item for sublist in condition_numbers for item in sublist]
+
+
 
 def radon_aggregate(pts, r):
     radons = []

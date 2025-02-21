@@ -27,6 +27,7 @@ pip install -r requirements.txt
 
 We use following datasets for our experiments:
 - [`SUSY`](https://doi.org/10.24432/C5460)
+  - [`SUSY` alternative link](https://archive.ics.uci.edu/dataset/279/susy)
 - [`SEA(50)`](https://www.openml.org/search?type=data&sort=version&status=any&order=asc&exact_name=SEA(50))
 - [`codrna`](https://bmcbioinformatics.biomedcentral.com/articles/10.1186/1471-2105-7-173)
 

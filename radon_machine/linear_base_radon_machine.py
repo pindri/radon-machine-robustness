@@ -9,7 +9,7 @@ from sklearn.datasets import make_classification
 from sklearn.linear_model._base import LinearClassifierMixin
 from sklearn.svm import LinearSVC
 
-from radon_machine.radon_point.iterated_radon_point import iterated_radon_point
+from radon_machine.radon_point.iterated_radon_point import iterated_radon_point, iterated_averaging
 
 
 def initializer():
@@ -141,6 +141,21 @@ class RadonMachineLinearBase(LinearClassifierMixin):
 
     def decision_function(self, X):
         return self._fit_estimator.decision_function(X)
+
+
+
+class AveragingMachineLinearBase(RadonMachineLinearBase):
+    # Redefining the aggregation to use averaging.
+    def aggregate_estimators(self, shuffle=True):
+        # aggregate
+        if shuffle:
+            np.random.shuffle(self.estimators)
+        # estimator = np.mean(self.estimators, axis=0)
+        # self.condition_numbers = [0]
+        estimator, self.condition_numbers = iterated_averaging(self.estimators, self._radon_number, self.height, self.sigma)
+        self._fit_estimator = self.parse_params(estimator)
+        self.est_params = estimator
+
 
 
 if __name__ == "__main__":
