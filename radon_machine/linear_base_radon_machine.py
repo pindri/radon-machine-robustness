@@ -63,6 +63,8 @@ class RadonMachineLinearBase(LinearClassifierMixin):
             data = data[0]
         X, y = data
         _learner = self.Base_estimator(random_state=self.random_state, **self.svc_kwargs).fit(X, y, sample_weight)
+        # print(_learner.get_params())
+        # exit()
 
         return np.append(_learner.coef_, _learner.intercept_)
 

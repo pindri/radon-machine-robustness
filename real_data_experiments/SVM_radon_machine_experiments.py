@@ -11,6 +11,7 @@ from scipy.io import arff
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score
 from sklearn.svm import LinearSVC
+from diffprivlib.models import LogisticRegression as PrivateLogisticRegression
 
 # Bit hacky.
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -62,25 +63,38 @@ def run_noisy_experiment(X_train, y_train, X_test, y_test, split_idx,
                 radon_machine.set_estimators(original_estimators, shuffle)
                 auc = roc_auc_score(y_test, radon_machine.decision_function(X_test))
                 wrt.writerow(
-                    [split_idx, trial, sigma, num_outliers, radon_machine.height, auc, radon_machine.est_params,
+                    # [split_idx, trial, sigma, num_outliers, radon_machine.height, auc, radon_machine.est_params,
+                    [split_idx, trial, sigma, num_outliers, radon_machine.height, auc, 0,
                      max(radon_machine.condition_numbers)])
 
 
 def run_hypothesis_flipping_experiment(X_train, y_train, X_test, y_test, split_idx,
-                                       num_trials=10,
+                                       num_trials=1,
                                        log_file=None,
                                        max_height=10,
                                        sigmas=None,
                                        outliers=None,
                                        shuffle=True,
+                                       averaging=False,
                                        base_estimator=LinearSVC, **kwargs):
+    # How far away to put outliers.
+    outlier_multiplier = 10
+    if averaging:
+        radon_machine = AveragingMachineLinearBase(base_estimator, 100, max_height, n_jobs=1, random_state=11905150,
+                                                   **kwargs)
+    else:
+        radon_machine = RadonMachineLinearBase(base_estimator, 100, max_height, n_jobs=1, random_state=11905150,
+                                               **kwargs)
     if outliers is None:  # is expected to be non-decreasing
         outliers = [0, 25, 50, 75, 100, 125, 150, 175, 200, 225, 250, 275, 300, 325, 350, 375, 400, 425, 450, 475,
                     500, 600, 700, 800, 900, 1000]
+        outliers = [0, 50, 100, 150, 200]
     if sigmas is None:
         sigmas = [0, 1e-10, 1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 0.2, 0.5, 1, 2]
+        sigmas = [0.1, 0.2]
+        sigmas = [0]
 
-    radon_machine = RadonMachineLinearBase(base_estimator, 100, max_height, n_jobs=1, random_state=11905150, **kwargs)
+    # radon_machine = RadonMachineLinearBase(base_estimator, 100, max_height, n_jobs=1, random_state=11905150, **kwargs)
     radon_machine.fit(X_train, y_train)
     original_estimators = radon_machine.get_estimators()
     attacked_estimators = original_estimators.copy()
@@ -94,13 +108,14 @@ def run_hypothesis_flipping_experiment(X_train, y_train, X_test, y_test, split_i
             attacked_estimators = original_estimators.copy()
             radon_machine.sigma = sigma
             for num_outliers in outliers:
-                attacked_estimators[:num_outliers, :] = attacked_estimator + np.random.randn(
+                attacked_estimators[:num_outliers, :] = outlier_multiplier*attacked_estimator + np.random.randn(
                     *attacked_estimators[:num_outliers, :].shape) * (1e-10 * original_estimators.std(axis=0))
                 for trial in range(num_trials):
                     radon_machine.set_estimators(attacked_estimators, shuffle)
                     auc = roc_auc_score(y_test, radon_machine.decision_function(X_test))
                     writer.writerow(
-                        [split_idx, trial, sigma, num_outliers, radon_machine.height, auc, radon_machine.est_params,
+                        # [split_idx, trial, sigma, num_outliers, radon_machine.height, auc, radon_machine.est_params,
+                        [split_idx, trial, sigma, num_outliers, radon_machine.height, auc, 0,
                          max(radon_machine.condition_numbers)])
 
 
@@ -149,12 +164,21 @@ def run_hypothesis_orthogonal_big_vec_experiment(X_train, y_train, X_test, y_tes
                                                  sigmas=None,
                                                  outliers=None,
                                                  shuffle=True,
+                                                 averaging=False,
                                                  base_estimator=LinearSVC, **kwargs):
+    if averaging:
+        radon_machine = AveragingMachineLinearBase(base_estimator, 100, max_height, n_jobs=1, random_state=11905150,
+                                                   **kwargs)
+    else:
+        radon_machine = RadonMachineLinearBase(base_estimator, 100, max_height, n_jobs=1, random_state=11905150,
+                                               **kwargs)
     if outliers is None:  # is expected to be non-decreasing
         outliers = [0, 25, 50, 75, 100, 125, 150, 175, 200, 225, 250, 275, 300, 325, 350, 375, 400, 425, 450, 475,
                     500, 600, 700, 800, 900, 1000]
+        outliers = [0, 1000]
     if sigmas is None:
         sigmas = [0, 1e-10, 1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 0.2, 0.5, 1, 2]
+        sigmas = [0.1]
 
     radon_machine = RadonMachineLinearBase(base_estimator, 100, max_height, n_jobs=1, random_state=11905150, **kwargs)
     radon_machine.fit(X_train, y_train)
@@ -176,7 +200,7 @@ def run_hypothesis_orthogonal_big_vec_experiment(X_train, y_train, X_test, y_tes
                     radon_machine.set_estimators(attacked_estimators, shuffle)
                     auc = roc_auc_score(y_test, radon_machine.decision_function(X_test))
                     writer.writerow(
-                        [split_idx, trial, sigma, num_outliers, radon_machine.height, auc, radon_machine.est_params,
+                        [split_idx, trial, sigma, num_outliers, radon_machine.height, auc, 0,
                          max(radon_machine.condition_numbers)])
 
 
@@ -307,8 +331,14 @@ def run_experiments(dataset_name):
         pass
 
     elif dataset_name == "SEA":
-        call_parallel(run_noisy_experiment, X, y, "sea50_SVM_noisy", LinearSVC)
-        call_parallel(run_noisy_experiment, X, y, "sea50_SVM_noisy_averaged", LinearSVC, averaging=True)
+        # call_parallel(run_noisy_experiment, X, y, "sea50_SVM_noisy", LinearSVC)
+        # call_parallel(run_noisy_experiment, X, y, "sea50_SVM_noisy_averaged", LinearSVC, averaging=True)
+        # call_parallel(run_hypothesis_orthogonal_big_vec_experiment, X, y, "sea50_SVM_noisy", LinearSVC)
+        # call_parallel(run_hypothesis_orthogonal_big_vec_experiment, X, y, "sea50_SVM_noisy_averaged", LinearSVC, averaging=True)
+        call_parallel(run_hypothesis_flipping_experiment, X, y, "sea50_SVM_flip_rm", LinearSVC)
+        call_parallel(run_hypothesis_flipping_experiment, X, y, "sea50_SVM_flip_avg", LinearSVC, averaging=True)
+        # call_parallel(run_hypothesis_flipping_experiment, X, y, "sea50_SVM_flip_rm", PrivateLogisticRegression, epsilon=1)
+        # call_parallel(run_hypothesis_flipping_experiment, X, y, "sea50_SVM_flip_avg", PrivateLogisticRegression, averaging=True, epsilon=1)
         # call_parallel(run_hypothesis_flipping_experiment, X, y, "sea50_SVM_flip", LinearSVC)
         # call_parallel(run_hypothesis_flipping_big_vec_experiment, X, y, "sea50_SVM_big_flip", LinearSVC)
         # call_parallel(run_hypothesis_flipping_experiment, X, y, "sea50_LogReg_flip", LogisticRegression)
